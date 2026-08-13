@@ -7,6 +7,12 @@
 
 #include "SystemClock.h"
 
+Scheduler::Scheduler(int boostInterval)
+    : boostCounter(0),
+      boostInterval(boostInterval)
+{
+}
+
 void Scheduler::createTask(Task* task)
 {
     readyQueues[task->getPriority()].push_back(task);
@@ -31,6 +37,51 @@ int Scheduler::getHighestPriorityReadyQueue()
     }
 
     return highest;
+}
+
+int Scheduler::getLowestPriorityReadyQueue()
+{
+    int lowest = -1;
+
+    for (auto &entry : readyQueues)
+    {
+        if (!entry.second.empty())
+        {
+            lowest = (lowest == -1) ? entry.first
+                                    : std::min(lowest, entry.first);
+        }
+    }
+
+    return lowest;
+}
+
+void Scheduler::boostLowPriorityTasks()
+{
+    int highest = getHighestPriorityReadyQueue();
+    int lowest  = getLowestPriorityReadyQueue();
+
+    if (lowest == -1 || lowest >= highest)
+    {
+        return;
+    }
+
+    auto &lowQueue = readyQueues[lowest];
+
+    while (!lowQueue.empty())
+    {
+        Task* task = lowQueue.front();
+        lowQueue.pop_front();
+
+        readyQueues[lowest + 1].push_back(task);
+
+        std::cout << "[Aging] "
+                  << task->getName()
+                  << " boosted from priority "
+                  << lowest
+                  << " to "
+                  << lowest + 1
+                  << "\n";
+    }
 }
 
 void Scheduler::start()
@@ -130,6 +181,14 @@ void Scheduler::start()
         else
         {
             readyQueues[currentTask->getPriority()].push_back(currentTask);
+        }
+
+        boostCounter++;
+
+        if (boostCounter >= boostInterval)
+        {
+            boostLowPriorityTasks();
+            boostCounter = 0;
         }
 
         std::this_thread::sleep_for(
