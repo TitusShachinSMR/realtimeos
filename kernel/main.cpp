@@ -1,80 +1,78 @@
 #include <iostream>
-#include "Task.h"
-
-#include <iostream>
 
 #include "Task.h"
 #include "Scheduler.h"
+#include "Mutex.h"
 
-void ledTask()
-{
-    std::cout << "Blinking LED\n";
-}
-
-void uartTask()
-{
-    std::cout << "Sending UART Data\n";
-}
-
-void sensorTask()
-{
-    std::cout << "Reading Sensor\n";
-}
-
-void motorTask()
-{
-    std::cout << "Controlling Motor\n";
-}
 int main()
 {
-  Task led(
-    1,
-    "LED",
-    2,
-    [](Task& self)
-    {
-        std::cout << "Blinking LED\n";
-        self.delay(5);
-    });
+    // Large boost interval so aging doesn't muddle the mutex demo.
+    Scheduler scheduler(100000);
 
-  Task uart(
-    2,
-    "UART",
-    1,
-    [](Task& self)
-    {
-        std::cout << "Sending UART Data\n";
-    });
+    Mutex sharedBus(scheduler);
 
-  Task sensor(
-    3,
-    "Sensor",
-    5,
-    [](Task& self)
-    {
-        std::cout << "Reading Sensor\n";
-    });
+    bool lowHoldsBus = false;
 
-  Task motor(
-    4,
-    "Motor",
-    3,
-    [](Task& self)
-    {
-        std::cout << "Controlling Motor\n";
-    });
+    Task low(
+        1,
+        "Low",
+        1,
+        [&](Task& self)
+        {
+            if (!lowHoldsBus)
+            {
+                if (sharedBus.acquire(self))
+                {
+                    lowHoldsBus = true;
+                    std::cout << "Low acquired the bus\n";
+                    self.delay(10);
+                }
+                else
+                {
+                    std::cout << "Low waiting for the bus\n";
+                }
+            }
+            else
+            {
+                std::cout << "Low releasing the bus\n";
+                sharedBus.release(self);
+                lowHoldsBus = false;
+            }
+        });
 
-    Scheduler scheduler;
+    Task medium(
+        2,
+        "Medium",
+        3,
+        [](Task& self)
+        {
+            std::cout << "Medium running (does not need the bus)\n";
+            self.delay(10);
+        });
 
-   scheduler.createTask(&led);
+    Task high(
+        3,
+        "High",
+        5,
+        [&](Task& self)
+        {
+            if (sharedBus.acquire(self))
+            {
+                std::cout << "High using the bus\n";
+                sharedBus.release(self);
+                self.delay(10);
+            }
+            else
+            {
+                std::cout << "High waiting for the bus (blocks)\n";
+            }
+        });
 
-  scheduler.createTask(&uart);
+    scheduler.createTask(&low);
+    scheduler.createTask(&medium);
+    scheduler.createTask(&high);
 
-  scheduler.createTask(&sensor);
-
-  scheduler.createTask(&motor);
-
-  scheduler.start();
+    scheduler.start();
 
     return 0;
 }

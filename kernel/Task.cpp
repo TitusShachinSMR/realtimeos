@@ -8,6 +8,7 @@ Task::Task(int id,
     : id(id),
       name(name),
       priority(priority),
+      basePriority(priority),
       state(TaskState::READY),
       executionCount(0),
       wakeupTick(0),
@@ -45,6 +46,16 @@ int Task::getPriority() const
     return priority;
 }
 
+int Task::getBasePriority() const
+{
+    return basePriority;
+}
+
+void Task::setPriority(int newPriority)
+{
+    priority = newPriority;
+}
+
 TaskState Task::getState() const
 {
     return state;
@@ -58,6 +69,11 @@ void Task::setState(TaskState newState)
 bool Task::isReady() const
 {
     return state == TaskState::READY;
+}
+
+bool Task::isWaiting() const
+{
+    return state == TaskState::WAITING;
 }
 
 int Task::getExecutionCount() const

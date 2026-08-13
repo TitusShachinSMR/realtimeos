@@ -2,9 +2,7 @@
 #define SCHEDULER_H
 
 #include <deque>
-#include <queue>
 #include <unordered_map>
-#include <vector>
 
 #include "Task.h"
 
@@ -15,6 +13,11 @@ public:
 
     void createTask(Task* task);
     void start();
+
+    // Used by kernel objects (e.g. Mutex) to move a task
+    // between ready queues when its priority changes.
+    void setTaskPriority(Task* task, int newPriority);
+    void wakeTask(Task* task);
 
 private:
     std::unordered_map<int, std::deque<Task*>> readyQueues;

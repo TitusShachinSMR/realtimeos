@@ -13,4 +13,6 @@ kernel/main.cpp
 kernel/Task.cpp
 
 kernel/Scheduler.cpp
+
+kernel/Mutex.cpp
 )

@@ -84,6 +84,42 @@ void Scheduler::boostLowPriorityTasks()
     }
 }
 
+void Scheduler::setTaskPriority(Task* task, int newPriority)
+{
+    int oldPriority = task->getPriority();
+
+    if (oldPriority == newPriority)
+    {
+        return;
+    }
+
+    auto it = readyQueues.find(oldPriority);
+
+    if (it != readyQueues.end())
+    {
+        auto &queue = it->second;
+        auto found = std::find(queue.begin(), queue.end(), task);
+
+        if (found != queue.end())
+        {
+            queue.erase(found);
+        }
+    }
+
+    task->setPriority(newPriority);
+
+    if (task->isReady())
+    {
+        readyQueues[newPriority].push_back(task);
+    }
+}
+
+void Scheduler::wakeTask(Task* task)
+{
+    task->setState(TaskState::READY);
+    readyQueues[task->getPriority()].push_back(task);
+}
+
 void Scheduler::start()
 {
     std::cout << "\n=====================================\n";
@@ -91,6 +127,8 @@ void Scheduler::start()
     std::cout << "=====================================\n\n";
 
     SystemClock::start();
+
+    bool idleReported = false;
 
     while (true)
     {
@@ -129,12 +167,18 @@ void Scheduler::start()
 
         if (priority == -1)
         {
-            std::cout << "No READY tasks.\n";
+            if (!idleReported)
+            {
+                std::cout << "No READY tasks.\n";
+                idleReported = true;
+            }
 
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
             continue;
         }
+
+        idleReported = false;
 
         // -----------------------------------
         // Get next task from that priority
@@ -177,6 +221,11 @@ void Scheduler::start()
             std::cout
                 << currentTask->getName()
                 << " moved to DELAY queue\n";
+        }
+        else if (currentTask->isWaiting())
+        {
+            // Task is blocked on a kernel object (e.g. Mutex).
+            // The object holds the task and will wake it later.
         }
         else
         {

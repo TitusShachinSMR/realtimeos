@@ -9,6 +9,7 @@ enum class TaskState
     READY,
     RUNNING,
     BLOCKED,
+    WAITING,
     SUSPENDED,
     TERMINATED
 };
@@ -26,34 +27,30 @@ public:
     int getId() const;
     std::string getName() const;
     int getPriority() const;
+    int getBasePriority() const;
     TaskState getState() const;
 
+    void setPriority(int newPriority);
     void setState(TaskState newState);
     bool isReady() const;
+    bool isWaiting() const;
 
     int getExecutionCount() const;
-void delay(unsigned long ticks);
+    void delay(unsigned long ticks);
 
-unsigned long getWakeupTick() const;
+    unsigned long getWakeupTick() const;
 
-bool isBlocked() const;
+    bool isBlocked() const;
 
 private:
     int id;
     std::string name;
     int priority;
+    int basePriority;
     TaskState state;
     int executionCount;
     std::function<void(Task&)> function;
     unsigned long wakeupTick;
-};
-
-struct TaskCompare
-{
-    bool operator()(Task* a, Task* b) const
-    {
-        return a->getPriority() < b->getPriority();
-    }
 };
 
 #endif
