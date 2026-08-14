@@ -1,5 +1,6 @@
 #include "Task.h"
 #include "SystemClock.h"
+#include <algorithm>
 #include <iostream>
 Task::Task(int id,
            const std::string& name,
@@ -11,8 +12,10 @@ Task::Task(int id,
       basePriority(priority),
       state(TaskState::READY),
       executionCount(0),
+      function(function),
       wakeupTick(0),
-      function(function)
+      waitingOn(nullptr),
+      heldMutexes()
 {
 }
 
@@ -22,13 +25,23 @@ void Task::run()
 
     state = TaskState::RUNNING;
 
+    std::cout << "[State] "
+              << name
+              << " -> RUNNING (run no. "
+              << executionCount
+              << ")\n";
+
     function(*this);
 
-    // If the task didn't block itself,
+    // If the task didn't block / suspend / terminate itself,
     // make it READY again.
     if (state == TaskState::RUNNING)
     {
         state = TaskState::READY;
+
+        std::cout << "[State] "
+                  << name
+                  << " -> READY (yields CPU)\n";
     }
 }
 int Task::getId() const
@@ -96,6 +109,70 @@ void Task::delay(unsigned long ticks)
 bool Task::isBlocked() const
 {
     return state == TaskState::BLOCKED;
+}
+
+void Task::suspend()
+{
+    state = TaskState::SUSPENDED;
+
+    std::cout << "[State] "
+              << name
+              << " -> SUSPENDED (paused, must be resumed)\n";
+}
+
+void Task::resume()
+{
+    state = TaskState::READY;
+
+    std::cout << "[State] "
+              << name
+              << " -> READY (resumed)\n";
+}
+
+void Task::terminate()
+{
+    state = TaskState::TERMINATED;
+
+    std::cout << "[State] "
+              << name
+              << " -> TERMINATED (never scheduled again)\n";
+}
+
+bool Task::isSuspended() const
+{
+    return state == TaskState::SUSPENDED;
+}
+
+bool Task::isTerminated() const
+{
+    return state == TaskState::TERMINATED;
+}
+
+void Task::setWaitingOn(Mutex* mutex)
+{
+    waitingOn = mutex;
+}
+
+Mutex* Task::getWaitingOn() const
+{
+    return waitingOn;
+}
+
+void Task::holdMutex(Mutex* mutex)
+{
+    heldMutexes.push_back(mutex);
+}
+
+void Task::releaseMutex(Mutex* mutex)
+{
+    heldMutexes.erase(
+        std::remove(heldMutexes.begin(), heldMutexes.end(), mutex),
+        heldMutexes.end());
+}
+
+const std::vector<Mutex*>& Task::getHeldMutexes() const
+{
+    return heldMutexes;
 }
 
 unsigned long Task::getWakeupTick() const

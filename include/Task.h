@@ -3,6 +3,9 @@
 
 #include <functional>
 #include <string>
+#include <vector>
+
+class Mutex;
 
 enum class TaskState
 {
@@ -42,6 +45,22 @@ public:
 
     bool isBlocked() const;
 
+    // Lifecycle control
+    void suspend();
+    void resume();
+    void terminate();
+
+    bool isSuspended() const;
+    bool isTerminated() const;
+
+    // Priority-inheritance bookkeeping (used by Mutex).
+    void setWaitingOn(Mutex* mutex);
+    Mutex* getWaitingOn() const;
+
+    void holdMutex(Mutex* mutex);
+    void releaseMutex(Mutex* mutex);
+    const std::vector<Mutex*>& getHeldMutexes() const;
+
 private:
     int id;
     std::string name;
@@ -51,6 +70,8 @@ private:
     int executionCount;
     std::function<void(Task&)> function;
     unsigned long wakeupTick;
+    Mutex* waitingOn;
+    std::vector<Mutex*> heldMutexes;
 };
 
 #endif

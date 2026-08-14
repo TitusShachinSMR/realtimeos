@@ -3,6 +3,7 @@
 
 #include <deque>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "Task.h"
 
@@ -19,13 +20,18 @@ public:
     void setTaskPriority(Task* task, int newPriority);
     void wakeTask(Task* task);
 
+    // Wake a SUSPENDED task and put it back on the ready queue.
+    void resumeTask(Task* task);
+
 private:
     std::unordered_map<int, std::deque<Task*>> readyQueues;
     std::deque<Task*> delayQueue;
+    std::unordered_set<Task*> allTasks;
 
     int getHighestPriorityReadyQueue();
     int getLowestPriorityReadyQueue();
     void boostLowPriorityTasks();
+    bool allTasksTerminated() const;
 
     int boostCounter;
     int boostInterval;

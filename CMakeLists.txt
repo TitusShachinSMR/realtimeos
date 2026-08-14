@@ -16,3 +16,14 @@ kernel/Scheduler.cpp
 
 kernel/Mutex.cpp
 )
+
+add_executable(TinyRTOS_Inheritance
+
+kernel/demo_inheritance.cpp
+
+kernel/Task.cpp
+
+kernel/Scheduler.cpp
+
+kernel/Mutex.cpp
+)

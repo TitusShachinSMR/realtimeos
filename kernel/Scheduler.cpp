@@ -16,6 +16,7 @@ Scheduler::Scheduler(int boostInterval)
 void Scheduler::createTask(Task* task)
 {
     readyQueues[task->getPriority()].push_back(task);
+    allTasks.insert(task);
 
     std::cout << "Task Created : "
               << task->getName()
@@ -120,6 +121,33 @@ void Scheduler::wakeTask(Task* task)
     readyQueues[task->getPriority()].push_back(task);
 }
 
+void Scheduler::resumeTask(Task* task)
+{
+    if (!task->isSuspended())
+    {
+        return;
+    }
+
+    task->resume();
+    readyQueues[task->getPriority()].push_back(task);
+
+    std::cout << task->getName()
+              << " moved back to READY queue (resumed)\n";
+}
+
+bool Scheduler::allTasksTerminated() const
+{
+    for (Task* task : allTasks)
+    {
+        if (task->getState() != TaskState::TERMINATED)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 void Scheduler::start()
 {
     std::cout << "\n=====================================\n";
@@ -132,6 +160,17 @@ void Scheduler::start()
 
     while (true)
     {
+        // -----------------------------------
+        // All tasks finished -> stop the kernel
+        // -----------------------------------
+        if (allTasksTerminated())
+        {
+            std::cout << "\n=====================================\n";
+            std::cout << " All tasks TERMINATED - kernel done\n";
+            std::cout << "=====================================\n";
+            break;
+        }
+
         // -----------------------------------
         // Wake delayed tasks
         // -----------------------------------
@@ -214,7 +253,21 @@ void Scheduler::start()
         // -----------------------------------
         // Put task into appropriate queue
         // -----------------------------------
-        if (currentTask->isBlocked())
+        if (currentTask->isTerminated())
+        {
+            // Done forever - never re-scheduled.
+            std::cout
+                << currentTask->getName()
+                << " removed from scheduling\n";
+        }
+        else if (currentTask->isSuspended())
+        {
+            // Paused - held out of every queue until resumed.
+            std::cout
+                << currentTask->getName()
+                << " suspended - paused until resumed\n";
+        }
+        else if (currentTask->isBlocked())
         {
             delayQueue.push_back(currentTask);
 
