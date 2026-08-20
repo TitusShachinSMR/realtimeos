@@ -120,7 +120,8 @@ This produces `TinyRTOS` and `TinyRTOS_Inheritance` executables.
 * System Tick Generator (background timer thread)
 * Delay API (`delay(ticks)`) with a Delay Queue
 * Strict Priority Scheduling
-* Priority Round Robin Scheduling (equal priorities share the CPU)
+* Priority Scheduling with **Round-Robin Turn-Taking** among equal priorities
+  (cooperative — tasks are not preempted by a time quantum)
 * **Priority Aging** — boosts low-priority tasks to prevent starvation
 * **Mutex with Priority Inheritance** — fixes priority inversion
   * **Recursive mutex** — a task can acquire the same mutex multiple times
@@ -249,7 +250,7 @@ The scheduler is the heart of the kernel. Responsibilities:
 * Maintain Ready Queues (one `std::deque` per priority level)
 * Maintain the Delay Queue
 * Select the highest-priority READY task
-* Perform Round Robin among equal priorities
+* Perform round-robin turn-taking among equal priorities
 * Wake delayed tasks when their tick is reached
 * Boost low-priority queues (aging)
 * Dispatch tasks and route them to the correct queue after each run
@@ -355,12 +356,18 @@ the ready queues.
 
 # Scheduling Algorithm
 
-## Strict Priority + Round Robin
+## Strict Priority + Cooperative Turn-Taking
 
 Tasks are grouped by priority (higher number = higher priority). The scheduler
-always picks the **highest non-empty** ready queue, then runs tasks within that
-queue in round-robin order. If only one highest-priority task exists, it keeps
-running until it blocks, delays, suspends, or terminates.
+always picks the **highest non-empty** ready queue. Within one priority level,
+tasks take turns: each dispatch runs one task body, then the task goes to the
+back of its queue, so equal-priority tasks cycle in round-robin order.
+
+> **On "round robin":** this is **cooperative** turn-taking, not preemptive
+> time-sliced round-robin. Tasks are synchronous function calls, so a task is
+> never interrupted mid-body — there is **no time quantum**. A task yields the
+> CPU when its body returns, or when it calls `delay()`, blocks on a mutex,
+> suspends, or terminates.
 
 ## Priority Aging (anti-starvation / "boosting")
 
@@ -468,7 +475,7 @@ Task Created : Gamma | Priority = 3
 Task Created : Delta | Priority = 4
 
 =====================================
- TinyRTOS Priority Round Robin
+ TinyRTOS Priority Scheduler (Round-Robin Turn-Taking)
 =====================================
 
 ---------------------------------
@@ -578,7 +585,7 @@ Task Created : B | Priority = 3
 Task Created : C | Priority = 1
 
 =====================================
- TinyRTOS Priority Round Robin
+ TinyRTOS Priority Scheduler (Round-Robin Turn-Taking)
 =====================================
 
 ---------------------------------
@@ -718,7 +725,7 @@ This project helps build an understanding of:
 * Task Management
 * The Complete Task Lifecycle (READY / RUNNING / BLOCKED / WAITING / SUSPENDED / TERMINATED)
 * Priority Scheduling
-* Round Robin Scheduling
+* Round-Robin Turn-Taking (cooperative scheduling)
 * Priority Aging (preventing starvation)
 * Priority Inversion & Priority Inheritance (direct + transitive)
 * Recursive Mutexes and Critical Sections

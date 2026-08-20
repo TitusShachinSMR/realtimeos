@@ -151,7 +151,7 @@ bool Scheduler::allTasksTerminated() const
 void Scheduler::start()
 {
     std::cout << "\n=====================================\n";
-    std::cout << " TinyRTOS Priority Round Robin\n";
+    std::cout << " TinyRTOS Priority Scheduler (Round-Robin Turn-Taking)\n";
     std::cout << "=====================================\n\n";
 
     SystemClock::start();
